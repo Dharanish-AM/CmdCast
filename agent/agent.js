@@ -1,73 +1,88 @@
+const WebSocket = require("ws");
+const { exec } = require("child_process");
+const os = require("os");
+const DEVICE_ID = `${os.hostname()}-${os.arch()}-${os.platform()}`;
+const SERVER_URL = "ws://localhost:9000";
+const commands = require("./commands.js");
 
+function connectToServer() {
+  const socket = new WebSocket(SERVER_URL);
 
-const WebSocket = require('ws');
-const { exec } = require('child_process');
+  socket.on("open", () => {
+    console.log("✅ Connected to server");
+    socket.send(JSON.stringify({ type: "register", deviceId: DEVICE_ID }));
+    console.log(`🖥️ Registered this device: ${DEVICE_ID}`);
+  });
 
-const DEVICE_ID = 'macbook-001'; // Unique device ID
-const SERVER_URL = 'wss://your-server.com/agent'; // Replace with your actual WebSocket server URL
+  socket.on("message", (msg) => {
+    try {
+      const data = JSON.parse(msg);
 
-const commands = {
-  volume_unmute: `osascript -e 'set volume without output muted' -e 'set volume output volume 100'`,
-  volume_mute: `osascript -e 'set volume with output muted'`,
-  lock: `osascript -e 'tell application "System Events" to keystroke "q" using {control down, command down}'`,
-  sleep: `pmset sleepnow`,
-  shutdown: `osascript -e 'tell app "System Events" to shut down'`,
-  restart: `osascript -e 'tell app "System Events" to restart'`,
-  open_safari: `open -a Safari`,
-  open_terminal: `open -a Terminal`,
-  clipboard_hello: `echo 'Hello from iPhone!' | pbcopy`,
-  brightness_down: `/opt/homebrew/bin/brightness 0.3`,
-  brightness_up: `/opt/homebrew/bin/brightness 1.0`,
-  notify: `osascript -e 'display notification "Hello from iPhone" with title "Remote Control"'`,
-  mute: `osascript -e 'set volume with output muted'`,
-  unmute: `osascript -e 'set volume without output muted'`,
-  toggle_dnd: `osascript -e 'tell application "System Events" to key code 97'`,
-  open_finder: `open -a Finder`,
-  show_mission: `osascript -e 'tell application "Mission Control" to launch'`,
-  get_ip: `ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`,
-  battery_status: `pmset -g batt | grep -Eo "\\d+%"`,
-  disk_usage: `df -h / | tail -1 | awk '{print $5}'`,
-  screenshot: `screencapture -x -t jpg "$HOME/Pictures/Screenshot/screen.jpg" && echo "Screenshot saved to $HOME/Pictures/Screenshot/screen.jpg"`,
-};
+      switch (data.type) {
+        case "command":
+          const cmd = data.cmd;
+          if (!commands[cmd]) {
+            console.warn(`⚠️ Unknown command: ${cmd}`);
+            return;
+          }
 
-const socket = new WebSocket(SERVER_URL);
+          console.log(`🚀 Executing: ${cmd}`);
+          exec(commands[cmd], (err, stdout, stderr) => {
+            const output = err ? err.message : stdout || stderr || "Done";
+            socket.send(
+              JSON.stringify({
+                type: "response",
+                event: "command",
+                deviceId: DEVICE_ID,
+                cmd,
+                output: output.trim(),
+                success: !err,
+              })
+            );
+          });
+          break;
 
-socket.on('open', () => {
-  console.log('✅ Connected to server');
-  socket.send(JSON.stringify({ type: 'register', deviceId: DEVICE_ID }));
-});
+        case "status":
+          socket.send(
+            JSON.stringify({
+              type: "response",
+              event: "status",
+              deviceId: DEVICE_ID,
+              status: "online",
+            })
+          );
+          break;
 
-socket.on('message', (msg) => {
-  try {
-    const { cmd } = JSON.parse(msg);
-    const shellCommand = commands[cmd];
+        case "details":
+          socket.send(
+            JSON.stringify({
+              type: "response",
+              event: "details",
+              deviceId: DEVICE_ID,
+              hostname: os.hostname(),
+              platform: os.platform(),
+              arch: os.arch(),
+              uptime: os.uptime(),
+            })
+          );
+          break;
 
-    if (!shellCommand) {
-      console.warn(`⚠️ Invalid command received: ${cmd}`);
-      return;
-    }
-
-    console.log(`🚀 Executing command: ${cmd}`);
-    exec(shellCommand, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`❌ Error executing ${cmd}: ${error.message}`);
-        socket.send(JSON.stringify({ type: 'response', cmd, error: error.message }));
-        return;
+        default:
+          console.warn(`⚠️ Unknown message type: ${data.type}`);
       }
-      const output = (stdout || stderr).trim();
-      console.log(`✅ Output: ${output || '(no output)'}`);
-      socket.send(JSON.stringify({ type: 'response', cmd, output }));
-    });
-  } catch (err) {
-    console.error(`❌ Failed to parse message: ${err.message}`);
-  }
-});
+    } catch (err) {
+      console.error("❌ Invalid message received:", err.message);
+    }
+  });
 
-socket.on('close', () => {
-  console.log('🔌 Connection closed. Attempting to reconnect in 5s...');
-  setTimeout(() => process.exit(1), 5000); // restart via external process manager
-});
+  socket.on("error", (err) => {
+    console.error("🔌 WebSocket error:", err.message);
+  });
 
-socket.on('error', (err) => {
-  console.error(`❌ WebSocket error: ${err.message}`);
-});
+  socket.on("close", () => {
+    console.log("❌ Disconnected from server. Reconnecting in 1s...");
+    setTimeout(connectToServer, 1000);
+  });
+}
+
+connectToServer();

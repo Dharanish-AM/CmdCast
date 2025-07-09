@@ -30,6 +30,8 @@ wss.on("connection", (socket) => {
       if (data.type === "register") {
         socket.deviceId = data.deviceId;
         agents.set(data.deviceId, socket);
+        //print agents
+        console.log("Agents Map: ",agents.keys());
         console.log(`🖥️ Agent registered: ${data.deviceId}`);
       }
 

@@ -1,0 +1,25 @@
+const commands = {
+  volume_unmute: `osascript -e 'set volume without output muted' -e 'set volume output volume 100'`,
+  volume_mute: `osascript -e 'set volume with output muted'`,
+  lock: `osascript -e 'tell application "System Events" to keystroke "q" using {control down, command down}'`,
+  sleep: `pmset sleepnow`,
+  shutdown: `osascript -e 'tell app "System Events" to shut down'`,
+  restart: `osascript -e 'tell app "System Events" to restart'`,
+  open_safari: `open -a Safari`,
+  open_terminal: `open -a Terminal`,
+  clipboard_hello: `echo 'Hello from server!' | pbcopy`,
+  brightness_down: `/opt/homebrew/bin/brightness 0.3`,
+  brightness_up: `/opt/homebrew/bin/brightness 1.0`,
+  notify: `osascript -e 'display notification "Remote triggered" with title "Agent"'`,
+  mute: `osascript -e 'set volume with output muted'`,
+  unmute: `osascript -e 'set volume without output muted'`,
+  toggle_dnd: `osascript -e 'tell application "System Events" to key code 97'`,
+  open_finder: `open -a Finder`,
+  show_mission: `osascript -e 'tell application "Mission Control" to launch'`,
+  get_ip: `ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'`,
+  battery_status: `pmset -g batt | grep -Eo "\\d+%"`,
+  disk_usage: `df -h / | tail -1 | awk '{print $5}'`,
+  screenshot: `screencapture -x -t jpg "$HOME/Desktop/screen.jpg" && echo "Screenshot saved"`,
+};
+
+module.exports = commands;
