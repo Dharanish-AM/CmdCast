@@ -8,9 +8,9 @@ const deviceSchema = new mongoose.Schema({
     ref: "User",
   },
   metadata: {
-    os: String,
     hostname: String,
     platform: String,
+    arch: String,
   },
   status: {
     type: String,

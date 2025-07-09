@@ -65,7 +65,18 @@ const verifyCode = async (req, res) => {
   }
 };
 
+const getAllCodes = async (req, res) => {
+  try {
+    const codes = await Code.find();
+    return res.status(200).json(codes);
+  } catch (err) {
+    console.error("Error fetching codes:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   generateCode,
   verifyCode,
+  getAllCodes,
 };

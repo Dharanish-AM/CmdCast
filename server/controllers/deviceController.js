@@ -3,15 +3,17 @@ const User = require("../models/userSchema");
 const Code = require("../models/codeSchema");
 
 const registerDevice = async (req, res) => {
-  const { code, metadata } = req.body;
-  const deviceId = `${metadata.hostname}-${metadata.arch}-${metadata.platform}`;
-  const codeDetails = Token.findOne({ code }).populate("user");
+  const {deviceId, code, metadata } = req.body;
+  console.log("Received device registration request:", req.body);
+  const codeDetails = await Code.findOne({ code });
+  console.log("Code details:", codeDetails);
+
 
   if (!codeDetails) {
     return res.status(400).json({ message: "Invalid code" });
   }
 
-  const userId = codeDetails.user._id;
+  const userId = codeDetails.user;
   const user = await User.findById(userId);
 
   if (!user) {
@@ -84,7 +86,47 @@ const getDeviceStatus = async (req, res) => {
   }
 };
 
+const getDevices = async (req, res) => {
+  try {
+    const devices = await Device.find();
+    return res.status(200).json(devices);
+  } catch (error) {
+    console.error("Error fetching devices:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const updateDeviceStatus = async (req, res) => {
+  try {
+    const { deviceId, status, lastSeen } = req.body;
+    console.log("Received update device status request:", req.body);
+
+    if (!deviceId || !status) {
+      return res.status(400).json({ message: "deviceId and status are required" });
+    }
+
+    const device = await Device.findOne({ deviceId });
+
+    if (!device) {
+      return res.status(404).json({ message: "Device not found" });
+    }
+
+    device.status = status;
+    if (lastSeen) {
+      device.lastSeen = new Date(lastSeen);
+    }
+    await device.save();
+
+    return res.status(200).json({ message: "Device status updated successfully", device });
+  } catch (error) {
+    console.error("Error updating device status:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   registerDevice,
   getDeviceStatus,
+  getDevices,
+  updateDeviceStatus,
 };

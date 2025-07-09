@@ -1,17 +1,23 @@
 const WebSocket = require("ws");
 const { exec } = require("child_process");
 const os = require("os");
+const readline = require("readline");
 const DEVICE_ID = `${os.hostname()}-${os.arch()}-${os.platform()}`;
 const SERVER_URL = "ws://localhost:9000";
 const commands = require("./commands.js");
 
-function connectToServer() {
+function connectToServer(code) {
   const socket = new WebSocket(SERVER_URL);
 
   socket.on("open", () => {
+    console.log(`🖥️ Sent connect request: ${DEVICE_ID}`);
+    socket.send(
+      JSON.stringify({
+        type: "connect",
+        deviceId: DEVICE_ID,
+      })
+    );
     console.log("✅ Connected to server");
-    socket.send(JSON.stringify({ type: "register", deviceId: DEVICE_ID }));
-    console.log(`🖥️ Registered this device: ${DEVICE_ID}`);
   });
 
   socket.on("message", (msg) => {
@@ -49,6 +55,7 @@ function connectToServer() {
               event: "status",
               deviceId: DEVICE_ID,
               status: "online",
+              lastSeen: new Date(),
             })
           );
           break;
@@ -67,6 +74,74 @@ function connectToServer() {
           );
           break;
 
+        case "connect-ok":
+          console.log("✅ Device registered and connected successfully.");
+          break;
+
+        case "pair-status":
+          if (data.success) {
+            console.log("✅ Pairing successful!");
+            setTimeout(() => connectToServer(), 1000);
+          } else {
+            console.log("❌ Pairing failed:", data.message || "Invalid code");
+
+            const rl = readline.createInterface({
+              input: process.stdin,
+              output: process.stdout,
+            });
+
+            rl.question("🔁 Re-enter 6-digit code from web UI: ", function (inputCode) {
+              const pairingCode = inputCode.trim().toUpperCase();
+              rl.close();
+
+              socket.send(
+                JSON.stringify({
+                  type: "pair",
+                  deviceId: DEVICE_ID,
+                  code: pairingCode,
+                  metadata: {
+                    hostname: os.hostname(),
+                    platform: os.platform(),
+                    arch: os.arch(),
+                  },
+                })
+              );
+
+              console.log(`🔗 Retrying with pairing code: ${pairingCode}`);
+            });
+          }
+          break;
+
+        case "need-pair":
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+          });
+
+          rl.question(
+            "🔑 Enter 6-digit code from web UI: ",
+            function (inputCode) {
+              const pairingCode = inputCode.trim().toUpperCase();
+              rl.close();
+
+              socket.send(
+                JSON.stringify({
+                  type: "pair",
+                  deviceId: DEVICE_ID,
+                  code: pairingCode,
+                  metadata: {
+                    hostname: os.hostname(),
+                    platform: os.platform(),
+                    arch: os.arch(),
+                  },
+                })
+              );
+
+              console.log(`🔗 Sent pairing code: ${pairingCode}`);
+            }
+          );
+          break;
+
         default:
           console.warn(`⚠️ Unknown message type: ${data.type}`);
       }
@@ -81,7 +156,7 @@ function connectToServer() {
 
   socket.on("close", () => {
     console.log("❌ Disconnected from server. Reconnecting in 1s...");
-    setTimeout(connectToServer, 1000);
+    setTimeout(() => connectToServer(code), 1000);
   });
 }
 
