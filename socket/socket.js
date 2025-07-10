@@ -30,6 +30,7 @@ wss.on("connection", (socket) => {
   socket.on("message", (msg) => {
     try {
       const data = JSON.parse(msg);
+      console.log("Received message:", data);
 
       switch (data.type) {
         case "connect":
@@ -66,6 +67,41 @@ wss.on("connection", (socket) => {
 
         case "response":
           console.log(`📥 Response from ${data.deviceId}: ${data.output}`);
+          break;
+
+        case "command":
+          const { deviceId, command } = data;
+
+          if (!deviceId || !command) {
+            socket.send(
+              JSON.stringify({
+                type: "error",
+                message: "Missing deviceId or command",
+              })
+            );
+            break;
+          }
+
+          const targetSocket = agents.get(deviceId);
+
+          if (!targetSocket || targetSocket.readyState !== WebSocket.OPEN) {
+            socket.send(
+              JSON.stringify({
+                type: "error",
+                message: `Device ${deviceId} is not connected`,
+              })
+            );
+            break;
+          }
+
+          targetSocket.send(
+            JSON.stringify({
+              type: "command",
+              cmd: command,
+            })
+          );
+
+          console.log(`📤 Forwarded command "${command}" to ${deviceId}`);
           break;
 
         case "pair":
@@ -146,6 +182,22 @@ wss.on("connection", (socket) => {
     if (socket.deviceId) {
       agents.delete(socket.deviceId);
       console.log(`❌ Agent disconnected: ${socket.deviceId}`);
+
+      axios
+        .post(`${API_URL}/api/devices/update-device-status`, {
+          deviceId: socket.deviceId,
+          status: "offline",
+          lastSeen: new Date(),
+        })
+        .then(() => {
+          console.log(`🔻 Marked ${socket.deviceId} as offline`);
+        })
+        .catch((err) => {
+          console.error(
+            `❌ Failed to mark ${socket.deviceId} offline:`,
+            err.message
+          );
+        });
     }
   });
 });
@@ -170,7 +222,10 @@ setInterval(() => {
           console.log(`✅ Status updated for ${deviceId}`);
         })
         .catch((err) => {
-          console.error(`❌ Failed to update status for ${deviceId}:`, err.message);
+          console.error(
+            `❌ Failed to update status for ${deviceId}:`,
+            err.message
+          );
         });
     }
   });

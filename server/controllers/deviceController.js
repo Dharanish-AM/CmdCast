@@ -99,7 +99,6 @@ const getDevices = async (req, res) => {
 const updateDeviceStatus = async (req, res) => {
   try {
     const { deviceId, status, lastSeen } = req.body;
-    console.log("Received update device status request:", req.body);
 
     if (!deviceId || !status) {
       return res.status(400).json({ message: "deviceId and status are required" });

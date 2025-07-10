@@ -90,4 +90,51 @@ const getUser = async (req, res) => {
   }
 };
 
-module.exports = { register, login,getUser };
+const sendCommand = async (req, res) => {
+  const { userId, deviceId, command } = req.body;
+  console.log("Received command:", req.body);
+
+  if (!userId || !command || !deviceId) {
+    return res
+      .status(400)
+      .json({ message: "User ID, device ID, and command are required." });
+  }
+
+  try {
+    const user = await User.findById(userId).populate("devices");
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    const userDevices = user.devices;
+    if (!userDevices || userDevices.length === 0) {
+      return res.status(404).json({ message: "No devices found." });
+    }
+    const device = userDevices.find(
+      (device) => String(device.deviceId) === String(deviceId)
+    );
+    if (!device) {
+      return res.status(404).json({ message: "Device not found." });
+    }
+    if (device.status !== "online") {
+      return res.status(400).json({ message: "Device is offline." });
+    }
+
+    const agentSocket = global.agents?.get(deviceId);
+
+    if (!agentSocket || agentSocket.readyState !== 1) {
+      return res.status(404).json({ message: "Agent not connected." });
+    }
+
+    console.log("Sending Command ",command," to ", deviceId)    
+    agentSocket.send(
+      JSON.stringify({ type: "command", command, userId, deviceId })
+    );
+
+    return res.status(200).json({ message: "Command sent successfully." });
+  } catch (err) {
+    console.error("Send command error:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+module.exports = { register, login, getUser, sendCommand };

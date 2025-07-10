@@ -6,4 +6,6 @@ router.post("/login", userController.login);
 
 router.get("/user", userController.getUser);
 
+router.post("/send-command", userController.sendCommand);
+
 module.exports = router;
