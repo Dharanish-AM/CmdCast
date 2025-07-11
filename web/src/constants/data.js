@@ -1,0 +1,150 @@
+import {
+  VolumeX,
+  Lock,
+  Moon,
+  Camera,
+  Folder,
+  Play,
+  SkipForward,
+  Clipboard,
+  Bell,
+  Power,
+  RefreshCw,
+} from "lucide-react";
+
+export const MOCK_DEVICES = [
+  {
+    id: "1",
+    name: "MacBook Pro M4",
+    type: "mac",
+    status: "online",
+    lastSeen: "Now",
+  },
+  {
+    id: "2",
+    name: "Asus TUF F15",
+    type: "windows",
+    status: "offline",
+    lastSeen: "2 min ago",
+  },
+  {
+    id: "3",
+    name: "Ubuntu Server",
+    type: "linux",
+    status: "connecting",
+    lastSeen: "5 min ago",
+  },
+];
+
+export const QUICK_ACTIONS = [
+  {
+    id: "1",
+    name: "Mute",
+    icon: VolumeX,
+    color: "blue",
+    category: "media",
+    value: "volume_mute",
+  },
+  {
+    id: "2",
+    name: "Unmute",
+    icon: VolumeX,
+    color: "blue",
+    category: "media",
+    value: "volume_unmute",
+  },
+  {
+    id: "3",
+    name: "Lock Screen",
+    icon: Lock,
+    color: "blue",
+    category: "system",
+    value: "lock",
+  },
+  {
+    id: "4",
+    name: "Sleep",
+    icon: Moon,
+    color: "blue",
+    category: "system",
+    value: "sleep",
+  },
+  {
+    id: "5",
+    name: "Screenshot",
+    icon: Camera,
+    color: "blue",
+    category: "system",
+    value: "screenshot",
+  },
+  {
+    id: "6",
+    name: "Files",
+    icon: Folder,
+    color: "blue",
+    category: "apps",
+    value: "open_finder",
+  },
+  {
+    id: "7",
+    name: "Play/Pause",
+    icon: Play,
+    color: "blue",
+    category: "media",
+    value: null,
+  },
+  {
+    id: "8",
+    name: "Next Track",
+    icon: SkipForward,
+    color: "blue",
+    category: "media",
+    value: null,
+  },
+  {
+    id: "9",
+    name: "Clipboard",
+    icon: Clipboard,
+    color: "blue",
+    category: "system",
+    value: "clipboard_hello",
+  },
+  {
+    id: "10",
+    name: "Notification",
+    icon: Bell,
+    color: "blue",
+    category: "system",
+    value: "notify",
+  },
+  {
+    id: "11",
+    name: "Shutdown",
+    icon: Power,
+    color: "blue",
+    category: "system",
+    value: "shutdown",
+  },
+  {
+    id: "12",
+    name: "Refresh",
+    icon: RefreshCw,
+    color: "blue",
+    category: "system",
+    value: null,
+  },
+];
+
+export const API_CONFIG = {
+  baseURL: "http://localhost:8000/api",
+  endpoints: {
+    sendCommand: "/users/send-command",
+  },
+  headers: {
+    Authorization: "amd123",
+  },
+  defaultPayload: {
+    userId: "686e85aebdffec94b27de135",
+    deviceId: "686e9159d6a9a3366d7d0d98",
+  },
+};

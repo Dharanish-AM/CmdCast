@@ -1,9 +1,13 @@
+const fs = require("fs");
+const path = require("path");
+const tmpDir = path.join(__dirname, "tmp");
+if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 const WebSocket = require("ws");
 const { exec } = require("child_process");
 const os = require("os");
 const readline = require("readline");
 const DEVICE_ID = `${os.hostname()}-${os.arch()}-${os.platform()}`;
-const SERVER_URL = "ws://localhost:9000";
+const SERVER_URL = "ws://localhost:8000";
 const commands = require("./commands.js");
 
 function connectToServer(code) {
@@ -45,6 +49,76 @@ function connectToServer(code) {
                 success: !err,
               })
             );
+          });
+          break;
+
+        case "screenshare":
+          console.log("Agent: Cleaning old screenshots...");
+          fs.readdir(tmpDir, (err, files) => {
+            if (!err) {
+              files
+                .filter(
+                  (file) => file.startsWith("screen-") && file.endsWith(".jpg")
+                )
+                .forEach((file) => {
+                  fs.unlink(path.join(tmpDir, file), () => {});
+                });
+            }
+
+            console.log("Agent: Starting screen capture");
+            const screenshotPath = path.join(
+              tmpDir,
+              `screen-${Date.now()}.jpg`
+            );
+            exec(`screencapture -x -t jpg "${screenshotPath}"`, (err) => {
+              if (err) {
+                socket.send(
+                  JSON.stringify({
+                    type: "response",
+                    event: "screenshot",
+                    deviceId: DEVICE_ID,
+                    success: false,
+                    error: err.message,
+                  })
+                );
+                return;
+              }
+
+              console.log(`Agent: Screenshot saved to ${screenshotPath}`);
+
+              fs.readFile(
+                screenshotPath,
+                { encoding: "base64" },
+                (err, data) => {
+                  if (err) {
+                    socket.send(
+                      JSON.stringify({
+                        type: "response",
+                        event: "screenshot",
+                        deviceId: DEVICE_ID,
+                        success: false,
+                        error: err.message,
+                      })
+                    );
+                    return;
+                  }
+
+                  socket.send(
+                    JSON.stringify({
+                      type: "response",
+                      event: "screenshot",
+                      deviceId: DEVICE_ID,
+                      success: true,
+                      image: `data:image/jpeg;base64,${data}`,
+                    })
+                  );
+
+                  console.log(`Agent: Screenshot sent to server`);
+
+                  fs.unlink(screenshotPath, () => {});
+                }
+              );
+            });
           });
           break;
 
@@ -90,25 +164,28 @@ function connectToServer(code) {
               output: process.stdout,
             });
 
-            rl.question("🔁 Re-enter 6-digit code from web UI: ", function (inputCode) {
-              const pairingCode = inputCode.trim().toUpperCase();
-              rl.close();
+            rl.question(
+              "🔁 Re-enter 6-digit code from web UI: ",
+              function (inputCode) {
+                const pairingCode = inputCode.trim().toUpperCase();
+                rl.close();
 
-              socket.send(
-                JSON.stringify({
-                  type: "pair",
-                  deviceId: DEVICE_ID,
-                  code: pairingCode,
-                  metadata: {
-                    hostname: os.hostname(),
-                    platform: os.platform(),
-                    arch: os.arch(),
-                  },
-                })
-              );
+                socket.send(
+                  JSON.stringify({
+                    type: "pair",
+                    deviceId: DEVICE_ID,
+                    code: pairingCode,
+                    metadata: {
+                      hostname: os.hostname(),
+                      platform: os.platform(),
+                      arch: os.arch(),
+                    },
+                  })
+                );
 
-              console.log(`🔗 Retrying with pairing code: ${pairingCode}`);
-            });
+                console.log(`🔗 Retrying with pairing code: ${pairingCode}`);
+              }
+            );
           }
           break;
 

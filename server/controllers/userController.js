@@ -3,6 +3,7 @@ const User = require("../models/userSchema");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
+const { agents } = require("../store/store");
 
 const register = async (req, res) => {
   const { username, email, password } = req.body;
@@ -91,10 +92,10 @@ const getUser = async (req, res) => {
 };
 
 const sendCommand = async (req, res) => {
-  const { userId, deviceId, command } = req.body;
+  const { userId, deviceId_id, command } = req.body;
   console.log("Received command:", req.body);
 
-  if (!userId || !command || !deviceId) {
+  if (!userId || !command || !deviceId_id) {
     return res
       .status(400)
       .json({ message: "User ID, device ID, and command are required." });
@@ -109,25 +110,35 @@ const sendCommand = async (req, res) => {
     if (!userDevices || userDevices.length === 0) {
       return res.status(404).json({ message: "No devices found." });
     }
-    const device = userDevices.find(
-      (device) => String(device.deviceId) === String(deviceId)
+
+    const targetDevice = userDevices.find(
+      (device) => device._id.toString() === deviceId_id
     );
-    if (!device) {
+
+    if (!targetDevice) {
       return res.status(404).json({ message: "Device not found." });
     }
-    if (device.status !== "online") {
+    if (!targetDevice) {
+      return res.status(404).json({ message: "Device not found." });
+    }
+
+    const deviceId = targetDevice.deviceId;
+    console.log("Device ID:", deviceId);
+    if (!targetDevice) {
+      return res.status(404).json({ message: "Device not found." });
+    }
+    if (targetDevice.status !== "online") {
       return res.status(400).json({ message: "Device is offline." });
     }
 
-    const agentSocket = global.agents?.get(deviceId);
-
+    console.log("Sending Command", command, "to", deviceId);
+    const agentSocket = agents.get(deviceId);
     if (!agentSocket || agentSocket.readyState !== 1) {
-      return res.status(404).json({ message: "Agent not connected." });
+      return res.status(400).json({ message: "Agent is not connected." });
     }
 
-    console.log("Sending Command ",command," to ", deviceId)    
     agentSocket.send(
-      JSON.stringify({ type: "command", command, userId, deviceId })
+      JSON.stringify({ type: "command", cmd: command, userId, deviceId })
     );
 
     return res.status(200).json({ message: "Command sent successfully." });
