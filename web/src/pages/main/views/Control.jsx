@@ -1,9 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Search, Maximize2, Camera, Activity, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  Maximize2,
+  Camera,
+  Activity,
+  X,
+} from "lucide-react";
+import { useSelector } from "react-redux";
 
-const Control = ({ 
-  selectedDevice, 
-  searchQuery, 
+const Control = ({
+  selectedDevice,
+  searchQuery,
   setSearchQuery,
   activeCategory,
   setActiveCategory,
@@ -13,43 +21,59 @@ const Control = ({
   onNavigate,
   onHandleCommand,
   getDeviceIcon,
-  getStatusColor 
+  getStatusColor,
 }) => {
-
-  const [liveImage, setLiveImage] = useState(null);
+  const imgRef = useRef(null);
   const ws = useRef(null);
+  const user = useSelector((state) => state.user.user);
+
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
-    ws.current = new WebSocket("ws://localhost:8000");
+    const ws = new WebSocket(`ws://${import.meta.env.VITE_WS_URL}`);
+    ws.binaryType = "arraybuffer";
 
-    ws.current.onopen = () => {
-      console.log("✅ WebSocket connected");
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: "viewer",
+          userId: user._id,
+          deviceId: selectedDevice.deviceId,
+        })
+      );
     };
 
-    ws.current.onmessage = (event) => {
+    ws.onmessage = (e) => {
       try {
-        const data = JSON.parse(event.data);
-        if (data.type === "response" && data.event === "screenshare" && data.image) {
-          console.log("✅ Received screenshot:", data);
-          setLiveImage(data.image);
+        const data = JSON.parse(e.data);
+        if (data.type === "viewer-frame" && data.image) {
+          imgRef.current.src = data.image;
+          setLoading(false);
+          setLastUpdated(new Date());
         }
       } catch (err) {
-        console.error("❌ Failed to parse WebSocket message:", err);
+        console.log("Error parsing WebSocket message:", err);
+        // If message is binary (e.g., blob), fallback to image display
+        const blob = new Blob([e.data], { type: "image/jpeg" });
+        imgRef.current.src = URL.createObjectURL(blob);
+        setLoading(false);
+        setLastUpdated(new Date());
       }
     };
 
-    return () => {
-      ws.current && ws.current.close();
-    };
+    return () => ws.close();
   }, []);
 
   const screenShare = async () => {
     if (ws.current && selectedDevice) {
       try {
-        ws.current.send(JSON.stringify({
-          type: "screenshare",
-          deviceId: selectedDevice.deviceId,
-        }));
+        ws.current.send(
+          JSON.stringify({
+            type: "screenshare",
+            deviceId: selectedDevice.deviceId,
+          })
+        );
       } catch (error) {
         console.error("Error sending screen share request:", error);
       }
@@ -156,7 +180,8 @@ const Control = ({
                 screenShare();
               }}
             >
-              <div className="text-center">
+              {
+                /* <div className="text-center">
                 <Camera className="w-12 h-12 text-slate-400 mx-auto mb-3" />
                 <p className="text-slate-600 text-sm font-medium">
                   Tap to view fullscreen
@@ -164,10 +189,27 @@ const Control = ({
                 <p className="text-slate-500 text-xs mt-1">
                   Live desktop preview
                 </p>
-              </div>
+              </div> */
+                <img
+                  ref={imgRef}
+                  alt="Live"
+                  className="rounded w-full h-full shadow"
+                />
+              }
             </div>
             <div className="flex items-center justify-between mt-3">
-              <p className="text-xs text-slate-500">Last updated: Now</p>
+              <p className="text-xs upp text-slate-500">
+                Last updated:{" "}
+                <span className="uppercase">
+                  {lastUpdated
+                    ? new Intl.DateTimeFormat("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      }).format(lastUpdated)
+                    : "—"}
+                </span>
+              </p>
               <div className="flex items-center space-x-1">
                 <Activity className="w-3 h-3 text-emerald-500" />
                 <span className="text-xs text-emerald-600 font-medium">
@@ -213,28 +255,36 @@ const Control = ({
 
       {/* Screenshot Modal */}
       {showScreenshot && (
-        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-6">
-          <div className="max-w-4xl w-full">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-white text-lg font-semibold">
-                Live View - {selectedDevice?.name}
-              </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center px-4 py-6 animate-fade-in">
+          <div className="w-full max-w-screen-2xl h-full flex flex-col transition-all duration-300 scale-100">
+            <div className="flex justify-between items-center text-white mb-4 px-2">
+              <h2 className="text-xl font-semibold truncate">
+                Live View — {selectedDevice?.deviceId}
+              </h2>
               <button
                 onClick={() => setShowScreenshot(false)}
-                className="text-white hover:text-slate-300 transition-colors p-2"
+                className="p-2 hover:text-slate-300 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="bg-slate-800 rounded-2xl aspect-video flex items-center justify-center">
-              {liveImage ? (
-                <img src={liveImage} alt="Live Screenshot" className="rounded-xl max-h-full max-w-full" />
-              ) : (
+            <div className="flex-1 rounded-lg overflow-hidden flex items-center justify-center border border-slate-600 bg-black">
+              {loading ? (
                 <div className="text-center">
-                  <Camera className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-300 font-medium">Live screenshot feed</p>
-                  <p className="text-slate-500 text-sm mt-2">Real-time desktop preview</p>
+                  <Camera className="w-20 h-20 text-slate-500 mx-auto mb-4 animate-pulse" />
+                  <p className="text-slate-300 font-medium text-lg">
+                    Waiting for live feed...
+                  </p>
+                  <p className="text-slate-500 text-sm mt-2">
+                    Real-time desktop preview
+                  </p>
                 </div>
+              ) : (
+                <img
+                  ref={imgRef}
+                  alt="Live"
+                  className="w-full h-full object-contain"
+                />
               )}
             </div>
           </div>

@@ -6,6 +6,7 @@ import Auth from "./pages/auth/Auth";
 import Dashboard from "./pages/main/Dashboard";
 import { getUser, loginUser } from "./services/authOperations";
 import { useNotification } from "./shared/hooks/useNotification";
+import { BeatLoader } from "react-spinners";
 
 function App() {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
@@ -107,8 +108,8 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen m-h-screen flex items-center justify-center">
+        <BeatLoader color="#E55050" size={20} />
       </div>
     );
   }

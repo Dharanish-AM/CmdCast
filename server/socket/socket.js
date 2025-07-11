@@ -9,7 +9,7 @@ const API_URL = process.env.API_URL;
 const tmpDir = path.join(__dirname, "tmp");
 if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 
-const { agents } = require("../store/store");
+const { agents, viewers } = require("../store/store");
 
 function initWebSocketServer(app, port = process.env.PORT || 8000) {
   const server = http.createServer(app);
@@ -91,9 +91,11 @@ function initWebSocketServer(app, port = process.env.PORT || 8000) {
             targetSocket.requestor = socket;
 
             // Ask agent to send a screenshot
-            targetSocket.send(JSON.stringify({
-              type: "screenshare",
-            }));
+            targetSocket.send(
+              JSON.stringify({
+                type: "screenshare",
+              })
+            );
             break;
 
           case "pair":
@@ -150,6 +152,39 @@ function initWebSocketServer(app, port = process.env.PORT || 8000) {
               });
             break;
 
+          case "viewer":
+            if (!viewers.has(data.deviceId)) viewers.set(data.deviceId, []);
+            viewers.get(data.deviceId).push(socket);
+
+            const viewerTarget = agents.get(data.deviceId);
+            if (!viewerTarget || viewerTarget.readyState !== WebSocket.OPEN) {
+              socket.send(
+                JSON.stringify({
+                  type: "error",
+                  message: `Device ${data.deviceId} is not connected`,
+                })
+              );
+              break;
+            }
+
+            console.log(`📺 Viewer connected for ${data.deviceId}`);
+
+            // Ask agent to start MJPEG streaming
+            viewerTarget.send(JSON.stringify({ type: "viewer" }));
+            break;
+
+          case "viewer-frame":
+            console.log(
+              `🖼️ Received viewer-frame for device: ${socket.deviceId}`
+            );
+            const viewerSockets = viewers.get(socket.deviceId) || [];
+            viewerSockets.forEach((viewerSocket) => {
+              if (viewerSocket.readyState === WebSocket.OPEN) {
+                viewerSocket.send(JSON.stringify(data));
+              }
+            });
+            break;
+
           default:
             console.warn(`⚠️ Unknown message type: ${data.type}`);
         }
@@ -178,6 +213,12 @@ function initWebSocketServer(app, port = process.env.PORT || 8000) {
             );
           });
       }
+      viewers.forEach((sockets, deviceId) => {
+        viewers.set(
+          deviceId,
+          sockets.filter((s) => s !== socket)
+        );
+      });
     });
   });
 

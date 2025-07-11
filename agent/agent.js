@@ -8,6 +8,7 @@ const os = require("os");
 const readline = require("readline");
 const DEVICE_ID = `${os.hostname()}-${os.arch()}-${os.platform()}`;
 const SERVER_URL = "ws://localhost:8000";
+const screenshot = require("screenshot-desktop");
 const commands = require("./commands.js");
 
 function connectToServer(code) {
@@ -146,6 +147,46 @@ function connectToServer(code) {
               uptime: os.uptime(),
             })
           );
+          break;
+
+        case "viewer":
+          console.log("🖼️ Viewer connected, starting periodic screenshots...");
+
+          let viewerIntervalSet = false;
+
+          let viewerInterval = setInterval(() => {
+            const screenshotPath = path.join(
+              tmpDir,
+              `screen-${Date.now()}.jpg`
+            );
+            exec(`screencapture -x -t jpg "${screenshotPath}"`, (err) => {
+              if (err) return;
+
+              fs.readFile(
+                screenshotPath,
+                { encoding: "base64" },
+                (err, data) => {
+                  if (err || socket.readyState !== WebSocket.OPEN) return;
+                  socket.send(
+                    JSON.stringify({
+                      type: "viewer-frame",
+                      deviceId: DEVICE_ID,
+                      image: `data:image/jpeg;base64,${data}`,
+                    })
+                  );
+                  fs.unlink(screenshotPath, () => {});
+                }
+              );
+            });
+          }, 1000);
+
+          if (!socket._viewerCloseHandlerSet) {
+            socket._viewerCloseHandlerSet = true;
+            socket.on("close", () => {
+              console.log("📴 Viewer disconnected, stopping screenshots.");
+              clearInterval(viewerInterval);
+            });
+          }
           break;
 
         case "connect-ok":
