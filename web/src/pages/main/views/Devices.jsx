@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowLeft, Plus, RotateCcw, MoreVertical } from "lucide-react";
 
-const DevicesScreen = ({ 
+const Devices = ({ 
   devices, 
   pairCode, 
   onNavigate, 
@@ -58,11 +58,11 @@ const DevicesScreen = ({
 
         {/* Device List */}
         <div className="space-y-4">
-          {devices.map((device) => {
+          {devices.map((device,i) => {
             const DeviceIcon = getDeviceIcon(device.type);
             return (
               <div
-                key={device.id}
+                key={i}
                 className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100"
               >
                 <div className="flex items-center justify-between">
@@ -78,7 +78,7 @@ const DevicesScreen = ({
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         <h3 className="font-semibold text-slate-900">
-                          {device.name}
+                          {device.deviceId}
                         </h3>
                       </div>
                       <div className="flex items-center space-x-4">
@@ -86,7 +86,7 @@ const DevicesScreen = ({
                           {device.status}
                         </p>
                         <p className="text-sm text-slate-500">
-                          {device.lastSeen}
+                          {new Date(device.lastSeen).toLocaleString()}
                         </p>
                         {device.battery && (
                           <div className="flex items-center space-x-1">
@@ -137,4 +137,4 @@ const DevicesScreen = ({
   );
 };
 
-export default DevicesScreen;
+export default Devices;

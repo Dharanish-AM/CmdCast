@@ -12,30 +12,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-export const MOCK_DEVICES = [
-  {
-    id: "1",
-    name: "MacBook Pro M4",
-    type: "mac",
-    status: "online",
-    lastSeen: "Now",
-  },
-  {
-    id: "2",
-    name: "Asus TUF F15",
-    type: "windows",
-    status: "offline",
-    lastSeen: "2 min ago",
-  },
-  {
-    id: "3",
-    name: "Ubuntu Server",
-    type: "linux",
-    status: "connecting",
-    lastSeen: "5 min ago",
-  },
-];
-
 export const QUICK_ACTIONS = [
   {
     id: "1",
@@ -134,17 +110,3 @@ export const QUICK_ACTIONS = [
     value: null,
   },
 ];
-
-export const API_CONFIG = {
-  baseURL: "http://localhost:8000/api",
-  endpoints: {
-    sendCommand: "/users/send-command",
-  },
-  headers: {
-    Authorization: "amd123",
-  },
-  defaultPayload: {
-    userId: "686e85aebdffec94b27de135",
-    deviceId: "686e9159d6a9a3366d7d0d98",
-  },
-};

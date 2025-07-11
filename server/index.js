@@ -7,6 +7,7 @@ const PORT = process.env.PORT || 8000;
 
 const connectToDB = require("./utils/db");
 const {initWebSocketServer} = require("./socket/socket");
+
 const userRoutes = require("./routes/userRoutes");
 const deviceRoutes = require("./routes/deviceRoutes");
 const codeRoutes = require("./routes/codeRoutes");

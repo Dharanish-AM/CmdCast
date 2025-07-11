@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Search, Maximize2, Camera, Activity, X } from "lucide-react";
 
-const ControlScreen = ({ 
+const Control = ({ 
   selectedDevice, 
   searchQuery, 
   setSearchQuery,
@@ -15,6 +15,47 @@ const ControlScreen = ({
   getDeviceIcon,
   getStatusColor 
 }) => {
+
+  const [liveImage, setLiveImage] = useState(null);
+  const ws = useRef(null);
+
+  useEffect(() => {
+    ws.current = new WebSocket("ws://localhost:8000");
+
+    ws.current.onopen = () => {
+      console.log("✅ WebSocket connected");
+    };
+
+    ws.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "response" && data.event === "screenshare" && data.image) {
+          console.log("✅ Received screenshot:", data);
+          setLiveImage(data.image);
+        }
+      } catch (err) {
+        console.error("❌ Failed to parse WebSocket message:", err);
+      }
+    };
+
+    return () => {
+      ws.current && ws.current.close();
+    };
+  }, []);
+
+  const screenShare = async () => {
+    if (ws.current && selectedDevice) {
+      try {
+        ws.current.send(JSON.stringify({
+          type: "screenshare",
+          deviceId: selectedDevice.deviceId,
+        }));
+      } catch (error) {
+        console.error("Error sending screen share request:", error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       {/* Header */}
@@ -38,7 +79,7 @@ const ControlScreen = ({
                   })}
                   <div>
                     <h1 className="text-lg font-semibold text-slate-900">
-                      {selectedDevice.name}
+                      {selectedDevice.deviceId}
                     </h1>
                     <div className="flex items-center space-x-2">
                       <div
@@ -97,7 +138,10 @@ const ControlScreen = ({
                 Live Preview
               </h2>
               <button
-                onClick={() => setShowScreenshot(true)}
+                onClick={() => {
+                  setShowScreenshot(true);
+                  screenShare();
+                }}
                 className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
               >
                 <Maximize2 className="w-5 h-5 text-slate-600" />
@@ -107,7 +151,10 @@ const ControlScreen = ({
           <div className="p-5">
             <div
               className="bg-slate-100 rounded-xl aspect-video flex items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors"
-              onClick={() => setShowScreenshot(true)}
+              onClick={() => {
+                setShowScreenshot(true);
+                screenShare();
+              }}
             >
               <div className="text-center">
                 <Camera className="w-12 h-12 text-slate-400 mx-auto mb-3" />
@@ -180,15 +227,15 @@ const ControlScreen = ({
               </button>
             </div>
             <div className="bg-slate-800 rounded-2xl aspect-video flex items-center justify-center">
-              <div className="text-center">
-                <Camera className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-300 font-medium">
-                  Live screenshot feed
-                </p>
-                <p className="text-slate-500 text-sm mt-2">
-                  Real-time desktop preview
-                </p>
-              </div>
+              {liveImage ? (
+                <img src={liveImage} alt="Live Screenshot" className="rounded-xl max-h-full max-w-full" />
+              ) : (
+                <div className="text-center">
+                  <Camera className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-300 font-medium">Live screenshot feed</p>
+                  <p className="text-slate-500 text-sm mt-2">Real-time desktop preview</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -197,4 +244,4 @@ const ControlScreen = ({
   );
 };
 
-export default ControlScreen;
+export default Control;

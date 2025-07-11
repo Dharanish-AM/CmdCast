@@ -11,7 +11,7 @@ import {
   Power 
 } from "lucide-react";
 
-const SettingsScreen = ({ user, onNavigate, onSignOut }) => {
+const Settings = ({ user, onNavigate, onSignOut }) => {
   const settingsOptions = [
     {
       icon: Bell,
@@ -46,7 +46,7 @@ const SettingsScreen = ({ user, onNavigate, onSignOut }) => {
     {
       icon: Share2,
       title: "Share",
-      subtitle: "Invite friends to Deskly",
+      subtitle: "Invite friends to CmdCast",
       color: "blue",
     },
   ];
@@ -127,4 +127,4 @@ const SettingsScreen = ({ user, onNavigate, onSignOut }) => {
   );
 };
 
-export default SettingsScreen;
+export default Settings;

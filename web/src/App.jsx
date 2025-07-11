@@ -1,167 +1,138 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useSelector, useDispatch } from "react-redux";
 
 // Components
-import LoginScreen from "./components/LoginScreen";
-import DashboardScreen from "./components/DashboardScreen";
-import DevicesScreen from "./components/DevicesScreen";
-import ControlScreen from "./components/ControlScreen";
-import SettingsScreen from "./components/SettingsScreen";
-import Notification from "./components/Notification";
-
-// Hooks
-import { useNotification } from "./hooks/useNotification";
-
-// Utils
-import { getDeviceIcon, getStatusColor } from "./utils/deviceUtils";
-
-// Constants
-import { MOCK_DEVICES, QUICK_ACTIONS, API_CONFIG } from "./constants/data";
+import Auth from "./pages/auth/Auth";
+import Dashboard from "./pages/main/Dashboard";
+import { getUser, loginUser } from "./services/authOperations";
+import { useNotification } from "./shared/hooks/useNotification";
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState("login");
-  const [user, setUser] = useState(null);
-  const [devices] = useState(MOCK_DEVICES);
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const [pairCode, setPairCode] = useState("");
-  const [showScreenshot, setShowScreenshot] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("all");
-
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const [loading, setLoading] = useState(true);
   const { notification, showNotification } = useNotification();
+  const user = useSelector((state) => state.user.user);
+  const devices = useSelector((state) => state.user.devices);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    if (currentScreen === "devices") {
-      setPairCode(Math.random().toString(36).substring(2, 8).toUpperCase());
-    }
-  }, [currentScreen]);
-
-  const handleLogin = (email, password) => {
-    const name = email.split("@")[0];
-    console.log(password);
-    setUser({ email, name: name.charAt(0).toUpperCase() + name.slice(1) });
-    setCurrentScreen("dashboard");
-    showNotification("Welcome to CmdCast!", "success");
-  };
-
-  const handleControlDevice = (device) => {
-    if (device.status !== "online") {
-      showNotification("Device is not available", "error");
-      return;
-    }
-    setSelectedDevice(device);
-    setCurrentScreen("control");
-  };
-
-  const handleCommand = async (action) => {
-    console.log(action);
-    try {
-      const response = await axios.post(
-        ` ${import.meta.env.VITE_API_URL}/api/users/send-command`,
-        {
-          command: action.value,
-          deviceId_id: "686e9159d6a9a3366d7d0d98",
-          userId: "686e85aebdffec94b27de135",
-        },
-        {}
-      );
-      console.log(response);
-      if (response?.status === 200) {
-        console.log(response.data);
-        showNotification(
-          `${action.name} executed on ${selectedDevice?.name}`,
-          "success"
-        );
-      } else {
-        showNotification(`Failed to execute ${action.name}`, "error");
+    const checkUserSession = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        console.log("Token:", token);
+        const response = await getUser(token);
+        if (response.status === 200 && response.data?.user) {
+          dispatch({
+            type: "SET_AUTH",
+            payload: {
+              isAuthenticated: true,
+              user: response.data.user,
+              token,
+            },
+          });
+          dispatch({
+            type: "SET_USER",
+            payload: {
+              user: response.data.user,
+              devices: response.data.user.devices,
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Error loading user session:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("❌ Command execution error:", err);
-      showNotification(`Failed to execute ${action.name}`, "error");
-    }
-  };
+    };
 
-  const handleGenerateCode = () => {
-    setPairCode(Math.random().toString(36).substring(2, 8).toUpperCase());
+    checkUserSession();
+  }, [dispatch]);
+
+  const handleLogin = async (email, password) => {
+    try {
+      const response = await loginUser(email, password, dispatch);
+      if (response?.success) {
+        const { token, user } = response;
+        console.log("Login response:", response);
+
+        localStorage.setItem("token", token);
+        dispatch({
+          type: "SET_AUTH",
+          payload: {
+            isAuthenticated: true,
+            user,
+            token,
+          },
+        });
+        dispatch({
+          type: "SET_USER",
+          payload: {
+            user,
+            devices: user.devices,
+          },
+        });
+
+        if (typeof showNotification === "function") {
+          showNotification("Login successful!", "success");
+        } else {
+          console.log("Login successful!");
+        }
+      } else {
+        showNotification(
+          "Login failed. Please check your credentials.",
+          "error"
+        );
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    }
   };
 
   const handleSignOut = () => {
-    setUser(null);
-    setCurrentScreen("login");
-    showNotification("Signed out successfully", "info");
+    localStorage.removeItem("token");
+    dispatch({
+      type: "SET_AUTH",
+      payload: { user: null, token: null, isAuthenticated: false },
+    });
+    dispatch({
+      type: "SET_USER",
+      payload: { user: null, devices: [] },
+    });
+    window.location.reload();
   };
 
-  const filteredActions = QUICK_ACTIONS.filter((action) => {
-    const matchesSearch = action.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      activeCategory === "all" || action.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const renderCurrentScreen = () => {
-    switch (currentScreen) {
-      case "login":
-        return <LoginScreen onLogin={handleLogin} />;
-      case "dashboard":
-        return (
-          <DashboardScreen
-            user={user}
-            devices={devices}
-            onNavigate={setCurrentScreen}
-            onControlDevice={handleControlDevice}
-            getDeviceIcon={getDeviceIcon}
-            getStatusColor={getStatusColor}
-          />
-        );
-      case "devices":
-        return (
-          <DevicesScreen
-            devices={devices}
-            pairCode={pairCode}
-            onNavigate={setCurrentScreen}
-            onGenerateCode={handleGenerateCode}
-            onControlDevice={handleControlDevice}
-            onShowNotification={showNotification}
-            getDeviceIcon={getDeviceIcon}
-            getStatusColor={getStatusColor}
-          />
-        );
-      case "control":
-        return (
-          <ControlScreen
-            selectedDevice={selectedDevice}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-            filteredActions={filteredActions}
-            showScreenshot={showScreenshot}
-            setShowScreenshot={setShowScreenshot}
-            onNavigate={setCurrentScreen}
-            onHandleCommand={handleCommand}
-            getDeviceIcon={getDeviceIcon}
-            getStatusColor={getStatusColor}
-          />
-        );
-      case "settings":
-        return (
-          <SettingsScreen
-            user={user}
-            onNavigate={setCurrentScreen}
-            onSignOut={handleSignOut}
-          />
-        );
-      default:
-        return <LoginScreen onLogin={handleLogin} />;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative">
-      {renderCurrentScreen()}
-      <Notification notification={notification} />
+    <div className="App">
+      {notification && (
+        <div
+          className={`fixed top-4 right-4 px-4 py-2 rounded shadow-lg text-white transition duration-300 ${
+            notification.type === "success"
+              ? "bg-green-500"
+              : notification.type === "error"
+              ? "bg-red-500"
+              : "bg-blue-500"
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+      {isAuthenticated ? (
+        <Dashboard user={user} devices={devices} onSignOut={handleSignOut} />
+      ) : (
+        <Auth onLogin={handleLogin} />
+      )}
     </div>
   );
 }

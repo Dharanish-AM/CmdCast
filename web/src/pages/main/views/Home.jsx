@@ -1,13 +1,13 @@
 import React from "react";
 import { Settings, Zap, Monitor } from "lucide-react";
 
-const DashboardScreen = ({ 
-  user, 
-  devices, 
-  onNavigate, 
-  onControlDevice, 
-  getDeviceIcon, 
-  getStatusColor 
+const Home = ({
+  user,
+  devices,
+  onNavigate,
+  onControlDevice,
+  getDeviceIcon,
+  getStatusColor,
 }) => {
   return (
     <div className="min-h-screen bg-slate-50">
@@ -15,11 +15,20 @@ const DashboardScreen = ({
       <div className="bg-white shadow-sm border-b border-slate-100">
         <div className="px-6 py-5">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Welcome back, {user?.name}
-              </p>
+            <div className="flex items-center gap-4">
+              <div>
+                <img
+                  src="/CmdCast-logo.png"
+                  alt="Logo"
+                  className="w-14 h-14 aspect-square"
+                />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">CmdCast</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  Welcome back, {user?.name}
+                </p>
+              </div>
             </div>
             <button
               onClick={() => onNavigate("settings")}
@@ -78,44 +87,50 @@ const DashboardScreen = ({
             </div>
           </div>
           <div className="p-5 space-y-4">
-            {devices.slice(0, 3).map((device) => {
-              const DeviceIcon = getDeviceIcon(device.type);
-              return (
-                <div
-                  key={device.id}
-                  className="flex items-center justify-between p-4 hover:bg-slate-50 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <DeviceIcon className="w-8 h-8 text-slate-600" />
-                      <div
-                        className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(
-                          device.status
-                        )} rounded-full border-2 border-white`}
-                      ></div>
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">
-                        {device.name}
-                      </p>
-                      <div className="flex items-center space-x-3 mt-1">
-                        <p className="text-sm text-slate-500">
-                          {device.lastSeen}
+            {devices && devices.length != 0 ? (
+              devices.slice(0, 3).map((device, index) => {
+                const DeviceIcon = getDeviceIcon(device.type);
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 hover:bg-slate-50 rounded-xl transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <DeviceIcon className="w-8 h-8 text-slate-600" />
+                        <div
+                          className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(
+                            device.status
+                          )} rounded-full border-2 border-white`}
+                        ></div>
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">
+                          {device.deviceId}
                         </p>
+                        <div className="flex items-center space-x-3 mt-1">
+                          <p className="text-sm text-slate-500">
+                            {new Date(device.lastSeen).toLocaleString()}
+                          </p>
+                        </div>
                       </div>
                     </div>
+                    {device.status === "online" && (
+                      <button
+                        onClick={() => onControlDevice(device)}
+                        className="px-4 py-2 bg-primary hover:bg-primary/90 cursor-pointer text-white text-sm font-medium rounded-xl transition-colors"
+                      >
+                        Control
+                      </button>
+                    )}
                   </div>
-                  {device.status === "online" && (
-                    <button
-                      onClick={() => onControlDevice(device)}
-                      className="px-4 py-2 bg-primary hover:bg-primary/90 cursor-pointer text-white text-sm font-medium rounded-xl transition-colors"
-                    >
-                      Control
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div>
+                <p>No Devices Found!</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -123,4 +138,4 @@ const DashboardScreen = ({
   );
 };
 
-export default DashboardScreen;
+export default Home;

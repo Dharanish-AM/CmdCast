@@ -17,6 +17,11 @@ const deviceSchema = new mongoose.Schema({
     enum: ["online", "offline"],
     default: "offline",
   },
+  type:{
+    type: String,
+    enum: ["mac", "windows", "linux"],
+    default: "windows",
+  }
 });
 
 module.exports = mongoose.model("Device", deviceSchema);

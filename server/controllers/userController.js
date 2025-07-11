@@ -6,16 +6,16 @@ dotenv.config();
 const { agents } = require("../store/store");
 
 const register = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { name, email, password } = req.body;
 
-  if (!username || !password) {
+  if (!name || !password) {
     return res
       .status(400)
-      .json({ message: "Username and password are required." });
+      .json({ message: "Name and password are required." });
   }
 
   try {
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findOne({ name });
     if (existingUser) {
       return res.status(409).json({ message: "Username already exists." });
     }
@@ -23,7 +23,7 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
-      username,
+      name,
       email,
       password: hashedPassword,
     });
@@ -32,7 +32,7 @@ const register = async (req, res) => {
 
     return res.status(201).json({
       message: "User registered successfully",
-      user: { id: newUser._id, username: newUser.username },
+      user: { id: newUser._id, name: newUser.name },
     });
   } catch (err) {
     console.error("Registration error:", err);
@@ -42,6 +42,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   const { email, password } = req.body;
+  console.log(email, password);
 
   if (!email || !password) {
     return res
@@ -50,7 +51,7 @@ const login = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate("devices");
     if (!user) {
       return res.status(401).json({ message: "Invalid Email or password" });
     }
@@ -59,13 +60,16 @@ const login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
+
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
+    const { password: _, ...safeUser } = user.toObject();
+
     return res.status(200).json({
       message: "Login successful",
-      user: { id: user._id, username: user.username },
+      user: safeUser,
       token,
     });
   } catch (err) {
@@ -75,16 +79,18 @@ const login = async (req, res) => {
 };
 
 const getUser = async (req, res) => {
-  const { userId } = req.query;
-  if (!userId) {
-    return res.status(400).json({ message: "User ID is required." });
+  const { token } = req.query || {};
+  if (!token) {
+    return res.status(401).json({ message: "Token is required." });
   }
   try {
-    const user = await User.findById(userId).select("-password");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).populate("devices");
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
-    return res.status(200).json({ user });
+    const { password: _, ...safeUser } = user.toObject();
+    return res.status(200).json({ user: safeUser });
   } catch (err) {
     console.error("Get user error:", err);
     return res.status(500).json({ message: "Internal server error" });
@@ -114,6 +120,8 @@ const sendCommand = async (req, res) => {
     const targetDevice = userDevices.find(
       (device) => device._id.toString() === deviceId_id
     );
+
+    console.log("Target Device:", targetDevice);
 
     if (!targetDevice) {
       return res.status(404).json({ message: "Device not found." });
