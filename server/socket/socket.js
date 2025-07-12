@@ -99,7 +99,7 @@ function initWebSocketServer(app, port = process.env.PORT || 8000) {
             break;
 
           case "pair":
-            console.log("Fetching valid codes from API...");
+            console.log("🔍 Validating pairing code...");
             axios
               .get(`http://localhost:${port}/api/codes/get-all-codes`)
               .then((res) => {
@@ -112,18 +112,35 @@ function initWebSocketServer(app, port = process.env.PORT || 8000) {
                 if (codeEntry) {
                   agents.set(data.deviceId, socket);
                   socket.deviceId = data.deviceId;
+                  console.log(
+                    `✅ Code valid. Registering device: ${data.deviceId}...`
+                  );
                   axios
                     .post(`${API_URL}/api/devices/register`, {
                       deviceId: data.deviceId,
                       metadata: data.metadata,
                       code: data.code,
                     })
-                    .then(() => {
+                    .then((res) => {
+                      const { userId, deviceId } = res.data;
+                      console.log(
+                        `📦 Device registered. User: ${userId}, Device: ${deviceId}`
+                      );
                       socket.send(
-                        JSON.stringify({ type: "pair-status", success: true })
+                        JSON.stringify({
+                          type: "pair-status",
+                          success: true,
+                          paired: true,
+                          userId,
+                          deviceId,
+                        })
                       );
                     })
                     .catch((err) => {
+                      console.error(
+                        "❌ Device registration failed:",
+                        err.message
+                      );
                       socket.send(
                         JSON.stringify({
                           type: "pair-status",
@@ -133,6 +150,7 @@ function initWebSocketServer(app, port = process.env.PORT || 8000) {
                       );
                     });
                 } else {
+                  console.warn("❌ Invalid or expired pairing code.");
                   socket.send(
                     JSON.stringify({
                       type: "pair-status",
@@ -143,6 +161,7 @@ function initWebSocketServer(app, port = process.env.PORT || 8000) {
                 }
               })
               .catch((err) => {
+                console.error("❌ Error fetching codes:", err.message);
                 socket.send(
                   JSON.stringify({
                     type: "error",

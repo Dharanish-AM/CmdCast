@@ -4,7 +4,7 @@
   "description": "",
   "main": "agent.js",
   "scripts": {
-    "start": "nodemon agent.js",
+    "start": "electron ./electron/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,8 +12,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "auto-launch": "^5.0.6",
     "nodemon": "^3.1.10",
     "screenshot-desktop": "^1.15.1",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "electron": "^37.2.1"
   }
 }

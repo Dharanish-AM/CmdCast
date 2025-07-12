@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const deviceSchema = new mongoose.Schema({
   deviceId: { type: String, required: true, unique: true },
+  deviceName: { type: String },
   lastSeen: { type: Date, default: Date.now },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -19,7 +20,7 @@ const deviceSchema = new mongoose.Schema({
   },
   type:{
     type: String,
-    enum: ["mac", "windows", "linux"],
+    enum: ["mac", "windows", "linux","unknown"],
     default: "windows",
   }
 });

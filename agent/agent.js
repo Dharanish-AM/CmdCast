@@ -5,14 +5,26 @@ if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
 const WebSocket = require("ws");
 const { exec } = require("child_process");
 const os = require("os");
-const readline = require("readline");
 const DEVICE_ID = `${os.hostname()}-${os.arch()}-${os.platform()}`;
 const SERVER_URL = "ws://localhost:8000";
-const screenshot = require("screenshot-desktop");
 const commands = require("./commands.js");
 
 function connectToServer(code) {
   const socket = new WebSocket(SERVER_URL);
+  // Check for existing pairing with validation of pair.json contents
+  const pairPath = path.join(__dirname, "electron", "pair.json");
+  let isAlreadyPaired = false;
+
+  if (fs.existsSync(pairPath)) {
+    try {
+      const pairData = JSON.parse(fs.readFileSync(pairPath));
+      isAlreadyPaired = pairData.paired === true;
+    } catch {
+      isAlreadyPaired = false;
+    }
+  }
+
+  console.log(`🔍 Checking for existing pairing: ${isAlreadyPaired}`);
 
   socket.on("open", () => {
     console.log(`🖥️ Sent connect request: ${DEVICE_ID}`);
@@ -23,6 +35,52 @@ function connectToServer(code) {
       })
     );
     console.log("✅ Connected to server");
+
+    if (!isAlreadyPaired) {
+      // Periodically check for pair-code.json and send the code if found
+      const pairCodePath = path.join(__dirname, "electron", "pair-code.json");
+      console.log(`🔍 Checking for pair-code.json at: ${pairCodePath}`);
+      let alreadySentCode = false;
+      pairCheckInterval = setInterval(() => {
+        console.log("⏱️ Periodic check: looking for pair-code.json...");
+        if (!alreadySentCode && fs.existsSync(pairCodePath)) {
+          try {
+            const { code } = JSON.parse(fs.readFileSync(pairCodePath));
+            if (code) {
+              alreadySentCode = true;
+              console.log(`🔗 Loaded code from file: ${code}`);
+
+              socket.send(
+                JSON.stringify({
+                  type: "pair",
+                  deviceId: DEVICE_ID,
+                  code: code.trim().toUpperCase(),
+                  metadata: {
+                    hostname: os.hostname(),
+                    platform: os.platform(),
+                    arch: os.arch(),
+                    type:
+                      os.platform() === "darwin"
+                        ? "mac"
+                        : os.platform() === "win32"
+                        ? "windows"
+                        : os.platform() === "linux"
+                        ? "linux"
+                        : "unknown",
+                  },
+                })
+              );
+              console.log("📤 Sent pairing code to server");
+            }
+          } catch (err) {
+            console.error(
+              "❌ Failed to read or parse pair-code.json:",
+              err.message
+            );
+          }
+        }
+      }, 1000);
+    }
   });
 
   socket.on("message", (msg) => {
@@ -196,68 +254,52 @@ function connectToServer(code) {
         case "pair-status":
           if (data.success) {
             console.log("✅ Pairing successful!");
+
+            const pairData = {
+              paired: true,
+              deviceId: data.deviceId || null,
+              userId: data.userId || null,
+            };
+
+            console.log("🔑 Pairing info:", pairData);
+
+            const pairPath = path.join(__dirname, "electron", "pair.json");
+            fs.writeFile(pairPath, JSON.stringify(pairData, null, 2), (err) => {
+              if (err) {
+                console.error("❌ Failed to write pair.json:", err.message);
+              } else {
+                console.log("📦 Saved pairing info to pair.json");
+                // Delete pair-code.json after successful pairing
+                const pairCodePath = path.join(
+                  __dirname,
+                  "electron",
+                  "pair-code.json"
+                );
+                if (fs.existsSync(pairCodePath)) {
+                  fs.unlink(pairCodePath, (err) => {
+                    if (err) {
+                      console.error(
+                        "❌ Failed to delete pair-code.json:",
+                        err.message
+                      );
+                    } else {
+                      console.log(
+                        "🧹 Deleted pair-code.json after successful pairing"
+                      );
+                    }
+                  });
+                }
+              }
+            });
+
             setTimeout(() => connectToServer(), 1000);
           } else {
             console.log("❌ Pairing failed:", data.message || "Invalid code");
-
-            const rl = readline.createInterface({
-              input: process.stdin,
-              output: process.stdout,
-            });
-
-            rl.question(
-              "🔁 Re-enter 6-digit code from web UI: ",
-              function (inputCode) {
-                const pairingCode = inputCode.trim().toUpperCase();
-                rl.close();
-
-                socket.send(
-                  JSON.stringify({
-                    type: "pair",
-                    deviceId: DEVICE_ID,
-                    code: pairingCode,
-                    metadata: {
-                      hostname: os.hostname(),
-                      platform: os.platform(),
-                      arch: os.arch(),
-                    },
-                  })
-                );
-
-                console.log(`🔗 Retrying with pairing code: ${pairingCode}`);
-              }
-            );
           }
           break;
 
         case "need-pair":
-          const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-          });
-
-          rl.question(
-            "🔑 Enter 6-digit code from web UI: ",
-            function (inputCode) {
-              const pairingCode = inputCode.trim().toUpperCase();
-              rl.close();
-
-              socket.send(
-                JSON.stringify({
-                  type: "pair",
-                  deviceId: DEVICE_ID,
-                  code: pairingCode,
-                  metadata: {
-                    hostname: os.hostname(),
-                    platform: os.platform(),
-                    arch: os.arch(),
-                  },
-                })
-              );
-
-              console.log(`🔗 Sent pairing code: ${pairingCode}`);
-            }
-          );
+          console.log("🔑 Waiting for pairing code from UI...");
           break;
 
         default:

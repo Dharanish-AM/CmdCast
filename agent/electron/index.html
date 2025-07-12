@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CmdCast - Device Pairing</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #ffffff;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #333;
+      }
+
+      .container {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        min-width: 400px;
+        max-width: 500px;
+        border: 1px solid #e1e5e9;
+      }
+
+      .logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .app-name {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #e55050;
+        margin-bottom: 0.5rem;
+      }
+
+      .subtitle {
+        color: #666;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        font-weight: 300;
+      }
+
+      #pairForm {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .input-group {
+        position: relative;
+      }
+
+      #code {
+        display: none;
+      }
+
+      .code-boxes {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+      }
+
+      .code-box {
+        width: 3rem;
+        height: 3rem;
+        text-align: center;
+        font-size: 1.5rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 10px;
+        outline: none;
+        background: rgba(255, 255, 255, 0.9);
+        transition: border-color 0.3s, box-shadow 0.3s;
+      }
+
+      .code-box:focus {
+        border-color: #e55050;
+        box-shadow: 0 0 0 3px rgba(229, 80, 80, 0.1);
+      }
+
+      .pair-button {
+        background: #e55050;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 20px rgba(229, 80, 80, 0.3);
+      }
+
+      .pair-button:active {
+        transform: translateY(0);
+      }
+
+      .pair-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .info-text {
+        margin-top: 1.5rem;
+        color: #888;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .status {
+        margin-top: 1rem;
+        padding: 0.8rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: none;
+      }
+
+      .status.success {
+        background: rgba(34, 197, 94, 0.1);
+        color: #16a34a;
+        border: 1px solid rgba(34, 197, 94, 0.2);
+      }
+
+      .status.error {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      .loading {
+        animation: pulse 1.5s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img src="../assets/CmdCast-logo.png" alt="CmdCast Logo" class="logo" />
+      <h1 class="app-name">CmdCast</h1>
+      <p class="subtitle">Connect your device with a pairing code</p>
+
+      <form id="pairForm">
+        <div class="input-group code-boxes">
+          <input type="text" maxlength="1" class="code-box" />
+          <input type="text" maxlength="1" class="code-box" />
+          <input type="text" maxlength="1" class="code-box" />
+          <input type="text" maxlength="1" class="code-box" />
+          <input type="text" maxlength="1" class="code-box" />
+          <input type="text" maxlength="1" class="code-box" />
+        </div>
+        <button type="submit" class="pair-button" id="pairButton">
+          Connect Device
+        </button>
+      </form>
+
+      <div class="status" id="status"></div>
+
+      <p class="info-text">
+        Get your pairing code from the CmdCast web dashboard.<br />
+        This will securely connect your device to your account.
+      </p>
+    </div>
+
+    <script>
+      const fs = require("fs");
+      const path = require("path");
+
+      const form = document.getElementById("pairForm");
+      const codeInputs = Array.from(document.querySelectorAll(".code-box"));
+      const button = document.getElementById("pairButton");
+      const status = document.getElementById("status");
+
+      function showStatus(message, type) {
+        status.textContent = message;
+        status.className = `status ${type}`;
+        status.style.display = "block";
+      }
+
+      function hideStatus() {
+        status.style.display = "none";
+      }
+
+      function setLoading(loading) {
+        button.disabled = loading;
+        button.textContent = loading ? "Connecting..." : "Connect Device";
+        if (loading) {
+          button.classList.add("loading");
+        } else {
+          button.classList.remove("loading");
+        }
+      }
+
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const code = codeInputs
+          .map((input) => input.value.trim().toUpperCase())
+          .join("");
+
+        if (!code) {
+          showStatus("Please enter a pairing code", "error");
+          return;
+        }
+
+        hideStatus();
+        setLoading(true);
+
+        const filePath = path.join(__dirname, "pair-code.json");
+        try {
+          fs.writeFileSync(filePath, JSON.stringify({ code }));
+          showStatus("Pairing code submitted!", "success");
+
+          // Periodically check for pairing result from pair.json
+          const pairStatusPath = path.join(__dirname, "pair.json");
+          let retries = 0;
+          const maxRetries = 10;
+
+          const interval = setInterval(() => {
+            retries++;
+            if (fs.existsSync(pairStatusPath)) {
+              try {
+                const { paired } = JSON.parse(fs.readFileSync(pairStatusPath));
+                if (paired === true) {
+                  clearInterval(interval);
+                  showStatus("✅ Connected successfully!", "success");
+                }
+              } catch (err) {
+                console.error("❌ Failed to read pair.json:", err.message);
+              }
+            }
+
+            if (retries >= maxRetries) {
+              clearInterval(interval);
+              showStatus("❌ Invalid or expired code", "error");
+            }
+          }, 1500);
+        } catch (err) {
+          showStatus("Failed to write code file", "error");
+          console.error("❌ Write error:", err);
+        }
+
+        setLoading(false);
+      };
+
+      // Focus input on load
+      window.addEventListener("load", () => {
+        codeInputs[0].focus();
+      });
+
+      // Auto-focus to next box, handle backspace, and enter key
+      codeInputs.forEach((input, index) => {
+        input.addEventListener("input", () => {
+          if (input.value.length === 1 && index < codeInputs.length - 1) {
+            codeInputs[index + 1].focus();
+          }
+        });
+
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace" && input.value === "" && index > 0) {
+            codeInputs[index - 1].focus();
+          }
+          if (e.key === "Enter") {
+            form.dispatchEvent(new Event("submit"));
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

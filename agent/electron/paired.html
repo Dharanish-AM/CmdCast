@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CmdCast - Device Paired</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #ffffff;
+        min-height: 100vh;
+        padding: 2rem;
+        color: #333;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e5e9;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      .logo {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto 1rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .app-name {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #e55050;
+        margin-bottom: 0.5rem;
+      }
+
+      .success-message {
+        color: #16a34a;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .subtitle {
+        color: #666;
+        font-size: 1rem;
+      }
+
+      .device-info {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid #e2e8f0;
+      }
+
+      .device-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .device-icon {
+        width: 48px;
+        height: 48px;
+        background: #e55050;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        color: white;
+        font-size: 1.5rem;
+      }
+
+      .device-title {
+        flex: 1;
+      }
+
+      .device-name {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+      }
+
+      .device-id {
+        font-size: 0.9rem;
+        color: #64748b;
+        font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
+      }
+
+      .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status-offline {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+      }
+
+      .status-online {
+        background: rgba(34, 197, 94, 0.1);
+        color: #16a34a;
+        border: 1px solid rgba(34, 197, 94, 0.2);
+      }
+
+      .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+      }
+
+      .detail-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+      }
+
+      .detail-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        border-color: #e55050;
+      }
+
+      .detail-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+      }
+
+      .detail-value {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #1e293b;
+        word-break: break-all;
+      }
+
+      .detail-value.monospace {
+        font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
+        font-size: 1rem;
+      }
+
+      .user-section {
+        background: linear-gradient(135deg, #e55050 0%, #c73e3e 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .user-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        opacity: 0.95;
+      }
+
+      .user-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .user-detail {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1rem;
+        backdrop-filter: blur(10px);
+      }
+
+      .user-detail-label {
+        font-size: 0.875rem;
+        opacity: 0.8;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+
+      .user-detail-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+      }
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .btn-primary {
+        background: #e55050;
+        color: white;
+        box-shadow: 0 4px 12px rgba(229, 80, 80, 0.3);
+      }
+
+      .btn-primary:hover {
+        background: #c73e3e;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(229, 80, 80, 0.4);
+      }
+
+      .btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+
+      .btn-secondary:hover {
+        background: #e2e8f0;
+        transform: translateY(-1px);
+      }
+
+      .last-seen {
+        margin-top: 1rem;
+        text-align: center;
+        color: #64748b;
+        font-size: 0.9rem;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .container {
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      .platform-icon {
+        font-size: 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img src="../assets/CmdCast-logo.png" alt="CmdCast Logo" class="logo" />
+        <h1 class="app-name">CmdCast</h1>
+        <div class="success-message">✅ Device Paired Successfully!</div>
+        <p class="subtitle">Your device is now connected to CmdCast</p>
+      </div>
+
+      <div class="user-section">
+        <h2 class="user-title">Account Information</h2>
+        <div class="user-details">
+          <div class="user-detail">
+            <div class="user-detail-label">Name</div>
+            <div class="user-detail-value" id="username">dharanish_am</div>
+          </div>
+          <div class="user-detail">
+            <div class="user-detail-label">Email</div>
+            <div class="user-detail-value" id="email">
+              dharanish@example.com
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="device-info">
+        <div class="device-header">
+          <div class="device-icon">
+            <span class="platform-icon" id="platformIcon">💻</span>
+          </div>
+          <div class="device-title">
+            <div class="device-name" id="deviceName">
+              Dharanishs-MacBook-Pro.local
+            </div>
+            <div class="device-id" id="deviceId">
+              Dharanishs-MacBook-Pro.local-arm64-darwin
+            </div>
+          </div>
+          <div class="status-badge status-offline" id="statusBadge">
+            Offline
+          </div>
+        </div>
+
+        <div class="details-grid">
+          <div class="detail-card">
+            <div class="detail-label">Hostname</div>
+            <div class="detail-value monospace" id="hostname">
+              Dharanishs-MacBook-Pro.local
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="detail-label">Platform</div>
+            <div class="detail-value" id="platform">macOS (darwin)</div>
+          </div>
+
+          <div class="detail-card">
+            <div class="detail-label">Architecture</div>
+            <div class="detail-value" id="architecture">ARM64</div>
+          </div>
+
+          <div class="detail-card">
+            <div class="detail-label">Device Type</div>
+            <div class="detail-value" id="deviceType">Mac</div>
+          </div>
+        </div>
+
+        <div class="last-seen" id="lastSeen">
+          Last seen: December 7, 2025 at 10:05 AM
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" onclick="openDashboard()">
+          🚀 Open Dashboard
+        </button>
+        <button class="btn btn-secondary" onclick="refreshStatus()">
+          🔄 Refresh Status
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // Device details fetch using pair.json
+      const fs = require("fs");
+      const path = require("path");
+      const pairPath = path.join(__dirname, "pair.json");
+
+      if (fs.existsSync(pairPath)) {
+        const pairData = JSON.parse(fs.readFileSync(pairPath));
+        const { userId, deviceId } = pairData;
+
+        fetch(
+          `http://localhost:8000/api/devices/details?userId=${userId}&deviceId=${deviceId}`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            console.log("📦 Received device data:", data);
+            updateUI(data);
+          })
+          .catch((err) => {
+            console.error("❌ Failed to fetch device details:", err);
+          });
+      } else {
+        console.warn("⚠️ pair.json not found. Cannot fetch device details.");
+      }
+
+      function formatLastSeen(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+      }
+
+      function getPlatformIcon(platform, type) {
+        const icons = {
+          darwin: "🍎",
+          win32: "🪟",
+          linux: "🐧",
+          mac: "💻",
+          windows: "🖥️",
+          mobile: "📱",
+        };
+        return icons[platform] || icons[type] || "💻";
+      }
+
+      function formatPlatform(platform) {
+        const platforms = {
+          darwin: "macOS (darwin)",
+          win32: "Windows",
+          linux: "Linux",
+        };
+        return platforms[platform] || platform;
+      }
+
+      function formatArchitecture(arc) {
+        const architectures = {
+          arm64: "ARM64",
+          x64: "x64",
+          x86: "x86",
+        };
+        return architectures[arc] || arc?.toUpperCase();
+      }
+
+      function updateUI(data) {
+        // Update user info
+        document.getElementById("username").textContent =
+          data.username || "N/A";
+        document.getElementById("email").textContent = data.email || "N/A";
+
+        // Update device info
+        document.getElementById("deviceName").textContent =
+          data.deviceName || "Unknown Device";
+        document.getElementById("deviceId").textContent =
+          data.deviceId || "N/A";
+        document.getElementById("hostname").textContent =
+          data.hostname || "N/A";
+        document.getElementById("platform").textContent = formatPlatform(
+          data.platform
+        );
+        document.getElementById("architecture").textContent =
+          formatArchitecture(data.arc);
+        document.getElementById("deviceType").textContent =
+          (data.type || "unknown").charAt(0).toUpperCase() +
+          (data.type || "unknown").slice(1);
+
+        // Update platform icon
+        document.getElementById("platformIcon").textContent = getPlatformIcon(
+          data.platform,
+          data.type
+        );
+
+        // Update status
+        const statusBadge = document.getElementById("statusBadge");
+        statusBadge.textContent = (data.status || "unknown").toUpperCase();
+        statusBadge.className = `status-badge status-${
+          data.status || "offline"
+        }`;
+
+        // Update last seen
+        if (data.lastSeen) {
+          document.getElementById(
+            "lastSeen"
+          ).textContent = `Last seen: ${formatLastSeen(data.lastSeen)}`;
+        }
+      }
+
+      function refreshStatus() {
+        if (fs.existsSync(pairPath)) {
+          const pairData = JSON.parse(fs.readFileSync(pairPath));
+          const { userId, deviceId } = pairData;
+
+          fetch(
+            `http://localhost:8000/api/devices/details?userId=${userId}&deviceId=${deviceId}`
+          )
+            .then((res) => res.json())
+            .then((data) => {
+              console.log("🔄 Refreshed device data:", data);
+              updateUI(data);
+            })
+            .catch((err) => {
+              console.error("❌ Failed to refresh device details:", err);
+            });
+        } else {
+          console.warn("⚠️ pair.json not found. Cannot refresh device details.");
+        }
+      }
+
+      // Initialize UI with device data (removed updateUI(deviceData);)
+      window.addEventListener("load", () => {
+        // UI will be updated after fetching device details above
+      });
+
+      const { shell } = require("electron");
+
+      function openDashboard() {
+        shell.openExternal("https://cmd-cast.vercel.app/");
+      }
+    </script>
+  </body>
+</html>
