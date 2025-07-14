@@ -233,6 +233,14 @@ function connectToServer(code) {
                     })
                   );
                   fs.unlink(screenshotPath, () => {});
+
+                  fs.readdir(tmpDir, (err, files) => {
+                    if (!err) {
+                      files
+                        .filter(file => file.startsWith("screen-") && file.endsWith(".jpg") && file !== path.basename(screenshotPath))
+                        .forEach(file => fs.unlink(path.join(tmpDir, file), () => {}));
+                    }
+                  });
                 }
               );
             });

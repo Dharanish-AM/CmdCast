@@ -149,7 +149,28 @@ const sendCommand = async (req, res) => {
       JSON.stringify({ type: "command", cmd: command, userId, deviceId })
     );
 
-    return res.status(200).json({ message: "Command sent successfully." });
+    agentSocket.once("message", (msg) => {
+      try {
+        const data = JSON.parse(msg);
+        if (
+          data.type === "response" &&
+          data.event === "command" &&
+          data.deviceId === deviceId
+        ) {
+          return res.status(200).json({
+            message: "Command executed",
+            output: data.output,
+            success: data.success,
+            cmd: data.cmd,
+          });
+        } else {
+          return res.status(500).json({ message: "Unexpected response from agent." });
+        }
+      } catch (parseErr) {
+        console.error("Error parsing agent response:", parseErr);
+        return res.status(500).json({ message: "Failed to parse agent response." });
+      }
+    });
   } catch (err) {
     console.error("Send command error:", err);
     return res.status(500).json({ message: "Internal server error" });

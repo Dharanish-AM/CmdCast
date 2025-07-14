@@ -6,6 +6,8 @@ import {
   Camera,
   Activity,
   X,
+  Pause,
+  Play,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 
@@ -29,22 +31,36 @@ const Control = ({
 
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [previewActive, setPreviewActive] = useState(false);
+
+  const colorMap = {
+  red: "bg-red-100 text-red-600",
+  orange: "bg-orange-100 text-orange-600",
+  green: "bg-green-100 text-green-600",
+  blue: "bg-blue-100 text-blue-600",
+};
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://${import.meta.env.VITE_WS_URL}`);
-    ws.binaryType = "arraybuffer";
+    if (!previewActive) {
+      if (imgRef.current) {
+        imgRef.current.src = "";
+      }
+      return;
+    }
 
-    ws.onopen = () => {
-      ws.send(
-        JSON.stringify({
-          type: "viewer",
-          userId: user._id,
-          deviceId: selectedDevice.deviceId,
-        })
-      );
+    const wsConn = new WebSocket(`ws://${import.meta.env.VITE_WS_URL}`);
+    wsConn.binaryType = "arraybuffer";
+
+    wsConn.onopen = () => {
+      ws.current = wsConn;
+      wsConn.send(JSON.stringify({
+        type: "viewer",
+        userId: user._id,
+        deviceId: selectedDevice.deviceId,
+      }));
     };
 
-    ws.onmessage = (e) => {
+    wsConn.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
         if (data.type === "viewer-frame" && data.image) {
@@ -54,7 +70,6 @@ const Control = ({
         }
       } catch (err) {
         console.log("Error parsing WebSocket message:", err);
-        // If message is binary (e.g., blob), fallback to image display
         const blob = new Blob([e.data], { type: "image/jpeg" });
         imgRef.current.src = URL.createObjectURL(blob);
         setLoading(false);
@@ -62,11 +77,14 @@ const Control = ({
       }
     };
 
-    return () => ws.close();
-  }, []);
+    return () => {
+      wsConn.close();
+      ws.current = null;
+    };
+  }, [previewActive]);
 
   const screenShare = async () => {
-    if (ws.current && selectedDevice) {
+    if (previewActive && ws.current && selectedDevice) {
       try {
         ws.current.send(
           JSON.stringify({
@@ -103,7 +121,7 @@ const Control = ({
                   })}
                   <div>
                     <h1 className="text-lg font-semibold text-slate-900">
-                      {selectedDevice.deviceId}
+                      {selectedDevice.deviceName}
                     </h1>
                     <div className="flex items-center space-x-2">
                       <div
@@ -161,15 +179,27 @@ const Control = ({
               <h2 className="text-lg font-semibold text-slate-900">
                 Live Preview
               </h2>
-              <button
-                onClick={() => {
-                  setShowScreenshot(true);
-                  screenShare();
-                }}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-              >
-                <Maximize2 className="w-5 h-5 text-slate-600" />
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setPreviewActive((prev) => !prev)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  {previewActive ? (
+                    <Pause className="w-5 h-5 text-slate-600" />
+                  ) : (
+                    <Play className="w-5 h-5 text-slate-600" />
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowScreenshot(true);
+                    screenShare();
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  <Maximize2 className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
             </div>
           </div>
           <div className="p-5">
@@ -190,11 +220,17 @@ const Control = ({
                   Live desktop preview
                 </p>
               </div> */
-                <img
-                  ref={imgRef}
-                  alt="Live"
-                  className="rounded w-full h-full shadow"
-                />
+                previewActive ? (
+                  <img
+                    ref={imgRef}
+                    alt="Live"
+                    className="rounded w-full h-full shadow"
+                  />
+                ) : (
+                  <div className="text-center text-slate-500 text-sm font-medium">
+                    Preview is stopped
+                  </div>
+                )
               }
             </div>
             <div className="flex items-center justify-between mt-3">
@@ -231,16 +267,15 @@ const Control = ({
             <div className="grid grid-cols-3 gap-4">
               {filteredActions.map((action) => {
                 const Icon = action.icon;
+                const colors = colorMap[action.color] || "bg-gray-100 text-gray-600";
                 return (
                   <button
                     key={action.id}
                     onClick={() => onHandleCommand(action)}
                     className="flex flex-col items-center p-4 hover:bg-slate-50 rounded-2xl transition-colors"
                   >
-                    <div
-                      className={`p-3 bg-${action.color}-100 rounded-2xl mb-3`}
-                    >
-                      <Icon className={`w-6 h-6 text-${action.color}-600`} />
+                    <div className={`p-3 rounded-2xl mb-3 ${colors.split(" ")[0]}`}>
+                      <Icon className={`w-6 h-6 ${colors.split(" ")[1]}`} />
                     </div>
                     <span className="text-sm font-medium text-slate-700 text-center">
                       {action.name}
@@ -259,7 +294,7 @@ const Control = ({
           <div className="w-full max-w-screen-2xl h-full flex flex-col transition-all duration-300 scale-100">
             <div className="flex justify-between items-center text-white mb-4 px-2">
               <h2 className="text-xl font-semibold truncate">
-                Live View — {selectedDevice?.deviceId}
+                Live View — {selectedDevice?.deviceName}
               </h2>
               <button
                 onClick={() => setShowScreenshot(false)}

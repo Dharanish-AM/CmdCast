@@ -48,19 +48,20 @@ const Dashboard = ({ user, devices,onSignOut }) => {
   const handleCommand = async (action) => {
     try {
       const url = `${import.meta.env.VITE_API_URL}/api/users/send-command`;
-      console.log(url);
       const response = await axios.post(url, {
         deviceId_id: selectedDevice._id,
         command: action.value,
         userId: user._id,
       });
 
+      console.log("🚀 Command executed:", response);
       if (response?.status === 200) {
-        console.log(response.data);
-        showNotification(
-          `${action.name} executed on ${selectedDevice?.name}`,
-          "success"
-        );
+        const successMessage = `${action.name} executed on ${selectedDevice?.deviceName}`;
+        showNotification(successMessage, "success");
+
+        if (response.data.output) {
+          alert(`📋 Output:\n\n${response.data.output}`);
+        }
       } else {
         showNotification(`Failed to execute ${action.name}`, "error");
       }

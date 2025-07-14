@@ -106,7 +106,7 @@ const Home = ({
                       </div>
                       <div>
                         <p className="font-medium text-slate-900">
-                          {device.deviceId}
+                          {device.deviceName}
                         </p>
                         <div className="flex items-center space-x-3 mt-1">
                           <p className="text-sm text-slate-500">

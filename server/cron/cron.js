@@ -1,7 +1,8 @@
 const cron = require("node-cron");
 const Code = require("../models/codeSchema");
 
-cron.schedule("* * * * *", () => {
+const clearCodes = async()=>{
+  cron.schedule("* * * * *", () => {
   console.log("Running a task every minute");
 
   Code.deleteMany({ expiresAt: { $lt: new Date() } })
@@ -13,3 +14,7 @@ cron.schedule("* * * * *", () => {
       console.error("❌ Error clearing expired codes:", err);
     });
 });
+
+}
+
+module.exports = clearCodes;

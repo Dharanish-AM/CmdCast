@@ -1,9 +1,11 @@
 import React from "react";
-import { ArrowLeft, Plus, RotateCcw, MoreVertical } from "lucide-react";
+import { ArrowLeft, Plus, RotateCcw, MoreVertical, Clock } from "lucide-react";
+import { useEffect } from "react";
+import { generateCode } from "../../../services/userOperations";
+import { useSelector } from "react-redux";
 
 const Devices = ({ 
   devices, 
-  pairCode, 
   onNavigate, 
   onGenerateCode, 
   onControlDevice,
@@ -11,6 +13,45 @@ const Devices = ({
   getDeviceIcon,
   getStatusColor 
 }) => {
+  const [pairCode, setPairCode] = React.useState(null);
+  const [expiresAt, setExpiresAt] = React.useState(null);
+  const [countdown, setCountdown] = React.useState('');
+  const user = useSelector((state) => state.user.user);
+
+  useEffect(()=>{
+    const fetchPairCode = async () => {
+      try {
+        const response = await generateCode(user._id);
+        const code = response.code;
+        const expiresAt = response.expiresAt;
+        setPairCode(code);
+        setExpiresAt(expiresAt);
+      } catch (error) {
+        console.error("Error fetching pair code:", error);
+      }
+    };
+    fetchPairCode();
+  },[user])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (expiresAt) {
+        const msLeft = new Date(expiresAt) - new Date();
+        const seconds = Math.floor(msLeft / 1000);
+
+        if (seconds <= 0) {
+          onGenerateCode && onGenerateCode();
+          setCountdown('');
+        } else if (seconds < 60) {
+          setCountdown(`Expires in: ${seconds}s`);
+        } else {
+          setCountdown(`Expires in: ${Math.floor(seconds / 60)}m`);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt, onGenerateCode]);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       {/* Header */}
@@ -43,10 +84,16 @@ const Devices = ({
           <p className="text-blue-100 text-sm mb-4">
             Enter this code on your device
           </p>
-          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-5 text-center">
+          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-5 relative text-center">
             <div className="text-3xl font-mono font-bold tracking-wider mb-3">
               {pairCode}
             </div>
+            {countdown && (
+              <p className="text-sm absolute flex items-center right-4 top-1 text-blue-100 mt-2">
+                <Clock size={"1.1em"} className="inline-block mr-1" />
+                {countdown}
+              </p>
+            )}
             <button
               onClick={onGenerateCode}
               className="text-sm text-blue-100 hover:text-white transition-colors font-medium"
@@ -78,7 +125,7 @@ const Devices = ({
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         <h3 className="font-semibold text-slate-900">
-                          {device.deviceId}
+                          {device.deviceName}
                         </h3>
                       </div>
                       <div className="flex items-center space-x-4">

@@ -132,7 +132,6 @@ const updateDeviceStatus = async (req, res) => {
 const getDeviceDetails = async (req, res) => {
   try {
     const { userId, deviceId } = req.query;
-    console.log("Received request to get device details:", req.query);
 
     if (!userId || !deviceId) {
       return res

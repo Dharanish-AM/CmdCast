@@ -9,6 +9,16 @@ const generateCode = async (req, res) => {
   }
 
   try {
+    const existingCode = await Code.findOne({ user: userId, used: false, expiresAt: { $gt: new Date() } });
+    if (existingCode) {
+      return res.status(200).json({ code: existingCode.code, expiresAt: existingCode.expiresAt });
+    }
+  } catch (err) {
+    console.error("Error checking existing code:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+
+  try {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let code;
 
@@ -28,7 +38,7 @@ const generateCode = async (req, res) => {
       expiresAt: new Date(Date.now() + 1 * 60 * 1000),
     });
 
-    return res.status(201).json({ code: newCode.code });
+    return res.status(201).json({ code: newCode.code, expiresAt: newCode.expiresAt });
   } catch (err) {
     console.error("Error generating code:", err);
     return res.status(500).json({ message: "Internal server error" });

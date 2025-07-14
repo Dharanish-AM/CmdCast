@@ -6,6 +6,7 @@ dotenv.config();
 const PORT = process.env.PORT || 8000;
 
 const connectToDB = require("./utils/db");
+const clearCodes = require("./cron/cron");
 const {initWebSocketServer} = require("./socket/socket");
 
 const userRoutes = require("./routes/userRoutes");
@@ -13,6 +14,7 @@ const deviceRoutes = require("./routes/deviceRoutes");
 const codeRoutes = require("./routes/codeRoutes");
 
 connectToDB();
+clearCodes();
 initWebSocketServer(app, PORT)
 
 app.use(cors({ origin: "*" }));
