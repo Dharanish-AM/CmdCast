@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
-const tmpDir = path.join(__dirname, "tmp");
-if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+const tmpDir = path.join(app.getPath("userData"), "tmp");
+if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 const WebSocket = require("ws");
 const { exec } = require("child_process");
 const os = require("os");
@@ -237,8 +237,15 @@ function connectToServer(code) {
                   fs.readdir(tmpDir, (err, files) => {
                     if (!err) {
                       files
-                        .filter(file => file.startsWith("screen-") && file.endsWith(".jpg") && file !== path.basename(screenshotPath))
-                        .forEach(file => fs.unlink(path.join(tmpDir, file), () => {}));
+                        .filter(
+                          (file) =>
+                            file.startsWith("screen-") &&
+                            file.endsWith(".jpg") &&
+                            file !== path.basename(screenshotPath)
+                        )
+                        .forEach((file) =>
+                          fs.unlink(path.join(tmpDir, file), () => {})
+                        );
                     }
                   });
                 }

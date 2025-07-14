@@ -151,7 +151,7 @@ export const QUICK_ACTIONS = [
   },
   {
     id: "11",
-    name: "Open Safari",
+    name: "Open Browser",
     icon: Play,
     color: "blue",
     category: "apps",

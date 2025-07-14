@@ -5,6 +5,7 @@
   "main": "agent.js",
   "scripts": {
     "start": "electron ./electron/main.js",
+     "build": "electron-builder", 
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,6 +19,31 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "electron": "^37.2.1"
+    "electron": "^37.2.1",
+        "electron-builder": "^24.6.0"
+  },
+  "build": {
+    "appId": "com.cmdcast.agent",
+    "productName": "CmdCast",
+    "directories": {
+      "output": "dist",
+          "buildResources": "build"
+    },
+    "files": [
+      "**/*",
+      "!dist",
+      "!node_modules/.cache"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "./assets/CmdCast-logo.icns"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "./assets/CmdCast-logo.png"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
