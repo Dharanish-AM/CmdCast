@@ -163,6 +163,9 @@
       <p class="subtitle">Connect your device with a pairing code</p>
 
       <form id="pairForm">
+        <div class="input-group">
+          <input type="text" id="deviceName" placeholder="Enter device name" class="code-box" style="width: 100%; font-size: 1rem; padding: 0.5rem;" />
+        </div>
         <div class="input-group code-boxes">
           <input type="text" maxlength="1" class="code-box" />
           <input type="text" maxlength="1" class="code-box" />
@@ -218,9 +221,10 @@
         const code = codeInputs
           .map((input) => input.value.trim().toUpperCase())
           .join("");
+        const deviceName = document.getElementById("deviceName").value.trim();
 
-        if (!code) {
-          showStatus("Please enter a pairing code", "error");
+        if (!code || !deviceName) {
+          showStatus("Please enter a pairing code and device name", "error");
           return;
         }
 
@@ -229,7 +233,7 @@
 
         const filePath = path.join(__dirname, "pair-code.json");
         try {
-          fs.writeFileSync(filePath, JSON.stringify({ code }));
+          fs.writeFileSync(filePath, JSON.stringify({ code, deviceName }));
           showStatus("Pairing code submitted!", "success");
 
           // Periodically check for pairing result from pair.json

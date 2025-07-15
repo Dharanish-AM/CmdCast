@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
-const tmpDir = path.join(app.getPath("userData"), "tmp");
+const os = require("os");
+const tmpDir = path.join(os.tmpdir(), "cmdcast-tmp");
 if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 const WebSocket = require("ws");
 const { exec } = require("child_process");
-const os = require("os");
 const DEVICE_ID = `${os.hostname()}-${os.arch()}-${os.platform()}`;
 const SERVER_URL = "ws://localhost:8000";
 const commands = require("./commands.js");
@@ -45,7 +45,7 @@ function connectToServer(code) {
         console.log("⏱️ Periodic check: looking for pair-code.json...");
         if (!alreadySentCode && fs.existsSync(pairCodePath)) {
           try {
-            const { code } = JSON.parse(fs.readFileSync(pairCodePath));
+            const { code, deviceName } = JSON.parse(fs.readFileSync(pairCodePath));
             if (code) {
               alreadySentCode = true;
               console.log(`🔗 Loaded code from file: ${code}`);
@@ -55,6 +55,7 @@ function connectToServer(code) {
                   type: "pair",
                   deviceId: DEVICE_ID,
                   code: code.trim().toUpperCase(),
+                  deviceName: deviceName || os.hostname(),
                   metadata: {
                     hostname: os.hostname(),
                     platform: os.platform(),

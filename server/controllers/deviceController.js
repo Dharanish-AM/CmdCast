@@ -3,7 +3,7 @@ const User = require("../models/userSchema");
 const Code = require("../models/codeSchema");
 
 const registerDevice = async (req, res) => {
-  const { deviceId, code, metadata } = req.body;
+  const { deviceId, code, metadata,deviceName } = req.body;
   console.log("Received device registration request:", req.body);
   const codeDetails = await Code.findOne({ code });
   console.log("Code details:", codeDetails);
@@ -31,7 +31,8 @@ const registerDevice = async (req, res) => {
     if (device) {
       device.lastSeen = new Date();
       device.metadata = metadata || device.metadata;
-      device.type = metadata.type 
+      device.type = metadata.type ,
+      device.deviceName = deviceName || device.metadata.hostname;  
       await device.save();
     } else {
       device = new Device({
