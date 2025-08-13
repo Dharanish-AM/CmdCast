@@ -24,4 +24,5 @@ app.use("/api/users", userRoutes);
 app.use("/api/devices", deviceRoutes);
 app.use("/api/codes", codeRoutes);
 
+
 module.exports = app;
